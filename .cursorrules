@@ -1,0 +1,89 @@
+You are an expert in TypeScript, Next.js, Tailwind CSS, and Node.js.
+
+## Project Overview
+- This project is a personal web-based tool for crafting, editing, and publishing Twitter threads.
+- It utilizes Next.js for the frontend, Tailwind CSS for styling, and Node.js for backend operations.
+- The full spec is available in the `spec` directory under `prd.md`.
+
+## Coding Guidelines
+- **Code Style and Structure**
+  - Write concise, modular TypeScript code.
+  - Use functional programming patterns; avoid classes unless necessary.
+  - Prefer iteration and modularization over code duplication.
+  - Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`).
+
+- **Naming Conventions**
+  - Use `camelCase` for variables and functions.
+  - Use `PascalCase` for React components and TypeScript interfaces.
+  - Use `kebab-case` for filenames and directories.
+
+- **TypeScript Usage**
+  - Use TypeScript for all code; prefer `interface` over `type` when defining object shapes.
+  - Avoid `any`; strive for explicit types.
+  - Use functional components with TypeScript interfaces.
+
+- **Syntax and Formatting**
+  - Use the `function` keyword for pure functions.
+  - Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
+  - Ensure all lines are no longer than 80 characters.
+
+- **UI and Styling**
+  - Use Tailwind CSS for styling components.
+  - Implement responsive design with a mobile-first approach.
+  - Ensure accessibility standards are met (e.g., proper ARIA labels).
+
+- **Performance Optimization**
+  - Minimize the use of `useEffect` and `useState`; favor React Server Components (RSC) where applicable.
+  - Optimize images: use WebP format, include size data, implement lazy loading.
+  - Ensure efficient data fetching and caching strategies.
+
+## Project-Specific Instructions
+- **Environment Variables**
+  - Access tokens and sensitive information are stored securely in environment variables.
+  - Ensure that these variables are accessed correctly within the application.
+
+- **Twitter Integration**
+  - Interact with the Twitter API v2 for posting and scheduling threads.
+  - Handle API rate limits and errors gracefully.
+
+- **Draft Management**
+  - Implement draft saving functionality using PostgreSQL.
+  - Ensure drafts can be tagged and searched efficiently.
+
+- **Scheduling**
+  - Use `Luxon` for time-based scheduling and time zone handling.
+  - Allow users to schedule threads for future posting times.
+
+- **OpenAI Integration**
+  - Use the `openai` library for AI inference.
+  - Set `gpt-40-mini` as the default model for all AI-driven tasks.
+  - Handle rate limits and retries gracefully in API requests.
+
+- **Prompt Engineering**
+  - Inject Required Context: Provide a clear description of the task or problem.
+  - Give Clear Instructions: Use precise language to describe the AI's role and actions.
+  - Set Expectations: Indicate the expected result or criteria for success.
+
+  ### Example Prompt
+  ```plaintext
+  You are an AI specializing in social media optimization. Your task is to create or reformat a tweet to maximize engagement. The tweet should convey excitement about a new feature in the Twitter Thread Editor. Ensure the tone is professional yet engaging, and keep it under 280 characters. Return the updated tweet.
+  ```
+
+  ### Best Practices for Prompts
+  - Keep prompts concise but detailed enough to provide clarity.
+  - Avoid ambiguity; test prompts iteratively to refine results.
+  - Use bullet points or numbered lists for multi-step instructions.
+
+## Testing and Debugging
+- Write unit tests for all components and functions.
+- Ensure all tests pass before merging code.
+- Include debug information in log files, but avoid exposing sensitive data.
+
+## Documentation
+- Provide clear comments and documentation for all functions and components.
+- Maintain an updated README with setup instructions and project overview.
+
+## Best Practices
+- Follow the principles of DRY (Don't Repeat Yourself) and SOLID design patterns.
+- Ensure code is clean, readable, and maintainable.
+- Regularly review and refactor code to improve performance and readability.
