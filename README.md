@@ -42,7 +42,7 @@ A powerful web-based tool designed to help you craft, edit, and publish engaging
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/twitter-thread-editor.git
+   git clone https://github.com/mikeyny/thread-maker.git
    cd twitter-thread-editor
    ```
 
