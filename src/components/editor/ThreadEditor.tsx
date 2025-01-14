@@ -27,6 +27,7 @@ export function ThreadEditor() {
   const { getCurrentThread, updateThread, createThread, updateThreadTitle } = useThreadStore()
   const currentThread = getCurrentThread()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [isPosting, setIsPosting] = useState(false)
 
   const handleAddTweet = () => {
     if (!currentThread) {
@@ -87,6 +88,36 @@ export function ThreadEditor() {
     return currentThread.tweets.map((t, i) => `Tweet ${i + 1}: ${t.content}`).join('\n')
   }
 
+  const handlePostToTwitter = async () => {
+    if (!currentThread || currentThread.tweets.length === 0) return
+    
+    setIsPosting(true)
+    try {
+      const response = await fetch('/api/twitter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweets: currentThread.tweets,
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to post thread')
+      }
+
+      alert('Thread posted successfully!')
+    } catch (error: any) {
+      console.error('Error posting thread:', error)
+      alert(error.message || 'Failed to post thread')
+    } finally {
+      setIsPosting(false)
+    }
+  }
+
   if (!currentThread) {
     return (
       <div className="text-center py-16">
@@ -130,12 +161,25 @@ export function ThreadEditor() {
             {currentThread?.tweets.length} tweets in thread
           </p>
         </div>
-        <button
-          onClick={handleAddTweet}
-          className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-        >
-          Add Tweet
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePostToTwitter}
+            disabled={isPosting || !currentThread?.tweets.length}
+            className={`px-4 py-2 text-white rounded-full transition-colors ${
+              isPosting || !currentThread?.tweets.length
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600'
+            }`}
+          >
+            {isPosting ? 'Posting...' : 'Post to Twitter'}
+          </button>
+          <button
+            onClick={handleAddTweet}
+            className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+          >
+            Add Tweet
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
