@@ -9,7 +9,7 @@ import { AITweetSuggestions } from './AITweetSuggestions'
 
 interface TweetCardProps {
   tweet: Tweet
-  onUpdate: (id: string, content: string) => void
+  onUpdate: (id: string, content: string, mediaUrls?: string[] | undefined) => void
   onDelete: (id: string) => void
   index: number
   moveCard: (dragIndex: number, hoverIndex: number) => void
@@ -33,12 +33,23 @@ interface EmojiDataset {
   [key: string]: Omit<EmojiData, 'id'>
 }
 
+interface MediaItem {
+  file: File
+  previewUrl: string
+}
+
+interface TweetWithMedia extends Tweet {
+  mediaFiles?: MediaItem[]
+}
+
 // Initialize emoji data
 const emojiDataTyped = emojiData as any
 const allEmojis = emojiDataTyped.emojis
 
 export function TweetCard({ tweet, onUpdate, onDelete, index, moveCard, threadContext }: TweetCardProps) {
   const [content, setContent] = useState(tweet.content)
+  const [media, setMedia] = useState<MediaItem[]>((tweet as TweetWithMedia).mediaFiles || [])
+  const [isUploading, setIsUploading] = useState(false)
   const [charCount, setCharCount] = useState(0)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showEmojiSuggestions, setShowEmojiSuggestions] = useState(false)
@@ -52,6 +63,7 @@ export function TweetCard({ tweet, onUpdate, onDelete, index, moveCard, threadCo
   const cardRef = useRef<HTMLDivElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const pickerHeight = 280 // height of emoji picker in pixels
 
@@ -119,7 +131,10 @@ export function TweetCard({ tweet, onUpdate, onDelete, index, moveCard, threadCo
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value
     setContent(newContent)
-    onUpdate(tweet.id, newContent)
+    // Preserve mediaFiles when updating content
+    const tweetWithMedia = tweet as TweetWithMedia
+    tweetWithMedia.mediaFiles = media
+    onUpdate(tweet.id, newContent, undefined)
 
     // Handle colon commands for emoji
     const cursorPosition = e.target.selectionStart || 0
@@ -360,6 +375,57 @@ export function TweetCard({ tweet, onUpdate, onDelete, index, moveCard, threadCo
     }
   }, [content])
 
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    try {
+      const newMedia = [...media]
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const previewUrl = URL.createObjectURL(file)
+        newMedia.push({ file, previewUrl })
+      }
+
+      setMedia(newMedia)
+      // Update the tweet object directly
+      const tweetWithMedia = tweet as TweetWithMedia
+      tweetWithMedia.mediaFiles = newMedia
+      // Call onUpdate to trigger a store update
+      onUpdate(tweet.id, content, undefined)
+    } catch (error) {
+      console.error('Error handling media:', error)
+      alert('Failed to handle media')
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemoveMedia = (index: number) => {
+    URL.revokeObjectURL(media[index].previewUrl)
+    const newMedia = media.filter((_, i) => i !== index)
+    setMedia(newMedia)
+    // Update the tweet object directly
+    const tweetWithMedia = tweet as TweetWithMedia
+    tweetWithMedia.mediaFiles = newMedia
+    // Call onUpdate to trigger a store update
+    onUpdate(tweet.id, content, undefined)
+  }
+
+  // Clean up object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      media.forEach(item => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl)
+        }
+      })
+    }
+  }, [])
+
   return (
     <div 
       ref={ref}
@@ -375,6 +441,31 @@ export function TweetCard({ tweet, onUpdate, onDelete, index, moveCard, threadCo
           <span className="text-sm font-medium text-gray-300">Tweet {index + 1}</span>
         </div>
         <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={handleMediaUpload}
+            disabled={isUploading || media.length >= 4}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || media.length >= 4}
+            className={`text-gray-400 hover:text-gray-300 transition-colors ${
+              (isUploading || media.length >= 4) ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            title={media.length >= 4 ? 'Maximum 4 media items per tweet' : 'Add media'}
+          >
+            {isUploading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
           <button
             ref={emojiButtonRef}
             onClick={handleEmojiPickerToggle}
@@ -406,6 +497,29 @@ export function TweetCard({ tweet, onUpdate, onDelete, index, moveCard, threadCo
           </button>
         </div>
       </div>
+
+      {media.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          {media.map((item, i) => (
+            <div key={i} className="relative group aspect-video">
+              <img
+                src={item.previewUrl}
+                alt={`Media ${i + 1}`}
+                className="w-full h-full object-cover rounded-lg"
+              />
+              <button
+                onClick={() => handleRemoveMedia(i)}
+                className="absolute top-2 right-2 p-1 bg-black bg-opacity-50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="relative">
         <textarea
           ref={textareaRef}

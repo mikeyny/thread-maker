@@ -53,9 +53,14 @@ function generateAuthHeader(method: string, url: string) {
     .join(', ')
 }
 
-async function postTweet(content: string, reply_to?: string) {
+async function postTweet(content: string, mediaIds?: string[], reply_to?: string) {
   const url = 'https://api.twitter.com/2/tweets'
   const body: any = { text: content }
+  
+  if (mediaIds && mediaIds.length > 0) {
+    body.media = { media_ids: mediaIds }
+  }
+  
   if (reply_to) {
     body.reply = { in_reply_to_tweet_id: reply_to }
   }
@@ -92,12 +97,12 @@ export async function POST(request: Request) {
     }
 
     // Post the first tweet
-    const firstTweet = await postTweet(tweets[0].content)
+    const firstTweet = await postTweet(tweets[0].content, tweets[0].mediaUrls)
     let lastTweetId = firstTweet.data.id
 
     // Post the rest of the tweets as replies
     for (let i = 1; i < tweets.length; i++) {
-      const tweet = await postTweet(tweets[i].content, lastTweetId)
+      const tweet = await postTweet(tweets[i].content, tweets[i].mediaUrls, lastTweetId)
       lastTweetId = tweet.data.id
     }
 

@@ -23,6 +23,15 @@ const DndProviderWrapper = dynamic(
   }
 )
 
+interface MediaItem {
+  file: File
+  previewUrl: string
+}
+
+interface TweetWithMedia extends Tweet {
+  mediaFiles?: MediaItem[]
+}
+
 export function ThreadEditor() {
   const { getCurrentThread, updateThread, createThread, updateThreadTitle } = useThreadStore()
   const currentThread = getCurrentThread()
@@ -43,11 +52,17 @@ export function ThreadEditor() {
     updateThread(currentThread.id, [...currentThread.tweets, newTweet])
   }
 
-  const handleUpdateTweet = (id: string, content: string) => {
+  const handleUpdateTweet = (id: string, content: string, mediaUrls?: string[]) => {
     if (!currentThread) return
 
     const updatedTweets = currentThread.tweets.map((t) =>
-      t.id === id ? { ...t, content } : t
+      t.id === id ? { 
+        ...t, 
+        content, 
+        mediaUrls,
+        // Preserve mediaFiles from the existing tweet object
+        mediaFiles: (t as TweetWithMedia).mediaFiles 
+      } : t
     )
     updateThread(currentThread.id, updatedTweets)
   }
@@ -93,20 +108,57 @@ export function ThreadEditor() {
     
     setIsPosting(true)
     try {
+      // First, upload all media
+      const tweetsWithMedia = await Promise.all(
+        currentThread.tweets.map(async (tweet) => {
+          const mediaUrls = []
+          const tweetWithMedia = tweet as TweetWithMedia
+          
+          if (tweetWithMedia.mediaFiles && tweetWithMedia.mediaFiles.length > 0) {
+            for (const mediaItem of tweetWithMedia.mediaFiles) {
+              const formData = new FormData()
+              formData.append('file', mediaItem.file)
+
+              const response = await fetch('/api/media', {
+                method: 'POST',
+                body: formData,
+              })
+
+              if (!response.ok) {
+                const error = await response.json()
+                console.error('Media upload error:', error)
+                throw new Error('Failed to upload media: ' + (error.details || error.error || 'Unknown error'))
+              }
+
+              const { mediaId } = await response.json()
+              mediaUrls.push(mediaId)
+            }
+          }
+          
+          return {
+            ...tweet,
+            mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined
+          }
+        })
+      )
+
+      // Then post the tweets
       const response = await fetch('/api/twitter', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tweets: currentThread.tweets,
+          tweets: tweetsWithMedia,
         }),
       })
 
       const data = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to post thread')
+        const error = data.error || 'Failed to post thread'
+        console.error('Twitter API error:', data)
+        throw new Error(error)
       }
 
       alert('Thread posted successfully!')
